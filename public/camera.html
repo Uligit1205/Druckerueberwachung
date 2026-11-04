@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-title" content="Druckerkamera">
+<title>Kamera – Druckerüberwachung</title>
+<link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="camera">
+<header class="top">
+  <h1>Kamera</h1>
+  <nav><a href="/">Ansicht</a><a href="/logout">Abmelden</a></nav>
+</header>
+<main>
+  <video id="video" class="camera-video" autoplay muted playsinline></video>
+
+  <div class="big-status"><span id="dot" class="dot"></span><span id="state">Bereit</span></div>
+  <div class="camstats">
+    <span>Zuschauer: <b id="watching">0</b></span>
+    <span>Gesendet: <b id="sent">0</b></span>
+    <span>Datenrate: <b id="rate">–</b></span>
+    <span>Kamerabild: <b id="res">–</b></span>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="primary" id="start">Kamera starten</button>
+    <button type="button" id="dim" disabled>Bildschirm schwarz</button>
+  </div>
+
+  <p id="error" class="error" hidden></p>
+
+  <section class="panel hint">
+    <h2>Damit es dauerhaft läuft</h2>
+    <ul>
+      <li>iPhone ans Ladekabel.</li>
+      <li><b>Einstellungen → Anzeige &amp; Helligkeit → Automatische Sperre → Nie</b></li>
+      <li>Diese Seite in <b>Safari</b> geöffnet lassen und nicht in den Hintergrund wechseln.</li>
+      <li>Empfohlen: <b>Geführter Zugriff</b> (Einstellungen → Allgemein → Bedienungshilfen) –
+        dann dreimal die Home-Taste drücken, um Safari festzusetzen.</li>
+      <li>„Bildschirm schwarz“ verdeckt die Anzeige. Antippen blendet sie wieder ein.
+        Die Displayhelligkeit am besten zusätzlich im Kontrollzentrum ganz herunterdrehen.</li>
+    </ul>
+  </section>
+</main>
+
+<div id="blackout" class="blackout">Antippen zum Einblenden</div>
+
+<canvas id="canvas" hidden></canvas>
+<script src="/camera.js"></script>
+</body>
+</html>

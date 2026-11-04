@@ -1,0 +1,23 @@
+# Variante B: Server zu Hause + Cloudflare Tunnel (siehe README)
+services:
+  druckerkamera:
+    build: .
+    restart: unless-stopped
+    environment:
+      PASSWORD: "${PASSWORD:?Bitte PASSWORD in .env setzen}"
+      STREAM_TOKEN: "${STREAM_TOKEN:-}"
+    ports:
+      - "8080:8080"
+
+  # Optional: Cloudflare Tunnel für HTTPS-Zugriff aus dem Internet.
+  # Token im Cloudflare-Dashboard erzeugen (Zero Trust → Networks → Tunnels)
+  # und als TUNNEL_TOKEN in .env eintragen. Öffentlicher Hostname → http://druckerkamera:8080
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:-}"
+    depends_on:
+      - druckerkamera
+    profiles: ["tunnel"]

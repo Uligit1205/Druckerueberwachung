@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anmelden – Druckerüberwachung</title>
+<link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="login">
+  <form method="post" action="/login">
+    <h1>Druckerüberwachung</h1>
+    <p id="error" class="error" hidden></p>
+    <label for="password" class="hint">Passwort</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+    <input id="next" name="next" type="hidden" value="/">
+    <button class="primary" type="submit">Anmelden</button>
+  </form>
+</div>
+<script src="/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Druckerüberwachung</title>
+<link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Druckerüberwachung</h1>
+  <nav><a href="/camera">Kameraseite</a><a href="/logout">Abmelden</a></nav>
+</header>
+<main>
+  <div id="stage" class="stage">
+    <div id="placeholder" class="placeholder">Warte auf Bild …</div>
+    <img id="frame" alt="Live-Bild des 3D-Druckers" hidden>
+    <span id="badge" class="badge"><span id="dot" class="dot"></span><span id="badgeText">Verbinde …</span></span>
+  </div>
+
+  <div class="statusline">
+    <span>Letztes Bild: <b id="age">–</b></span>
+    <span>Bildrate: <b id="fps">–</b></span>
+    <span>Bildgröße: <b id="size">–</b></span>
+    <span>Zuschauer: <b id="viewers">–</b></span>
+  </div>
+
+  <div class="actions">
+    <a class="button" id="snapshot" href="/snapshot.jpg" download="drucker.jpg">Foto speichern</a>
+    <button type="button" id="fullscreen">Vollbild</button>
+  </div>
+
+  <section class="panel">
+    <h2>Kamera-Einstellungen</h2>
+    <div class="grid">
+      <label class="field">Bildrate (beim Zuschauen)
+        <select id="interval">
+          <option value="200">5 Bilder/s</option>
+          <option value="333">3 Bilder/s</option>
+          <option value="500">2 Bilder/s</option>
+          <option value="1000">1 Bild/s</option>
+          <option value="2000">alle 2 s</option>
+          <option value="5000">alle 5 s</option>
+        </select>
+      </label>
+      <label class="field">Auflösung (Breite)
+        <select id="width">
+          <option value="320">320 px</option>
+          <option value="480">480 px</option>
+          <option value="640">640 px</option>
+          <option value="800">800 px</option>
+          <option value="960">960 px</option>
+          <option value="1280">1280 px</option>
+        </select>
+      </label>
+      <label class="field">JPEG-Qualität
+        <select id="quality">
+          <option value="0.4">40 %</option>
+          <option value="0.5">50 %</option>
+          <option value="0.6">60 %</option>
+          <option value="0.7">70 %</option>
+          <option value="0.8">80 %</option>
+          <option value="0.9">90 %</option>
+        </select>
+      </label>
+      <label class="field">Ohne Zuschauer
+        <select id="idleInterval">
+          <option value="0">keine Bilder senden</option>
+          <option value="10000">alle 10 s ein Bild</option>
+          <option value="30000">alle 30 s ein Bild</option>
+          <option value="60000">jede Minute ein Bild</option>
+          <option value="300000">alle 5 min ein Bild</option>
+        </select>
+      </label>
+      <label class="field">Drehung
+        <select id="rotation">
+          <option value="0">0°</option>
+          <option value="90">90° rechts</option>
+          <option value="180">180°</option>
+          <option value="270">90° links</option>
+        </select>
+      </label>
+      <label class="field">Kamera am iPhone
+        <select id="facing">
+          <option value="environment">Rückkamera</option>
+          <option value="user">Frontkamera</option>
+        </select>
+      </label>
+    </div>
+    <p class="hint">Änderungen werden sofort an das iPhone übertragen.</p>
+  </section>
+</main>
+<script src="/viewer.js"></script>
+</body>
+</html>
