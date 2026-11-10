@@ -1,18 +1,18 @@
 # Kamera-Streaming: iPhone 7 beobachtet meinen 3D-Drucker
 
 ## Ziel
-Ein altes iPhone 7 steht vor meinem Bambu-Lab-A1-mini-Drucker und sendet sein Kamerabild live. Ich schaue es von überall auf meinem iPad an (Browser). Mehr nicht: Der Drucker selbst wird weiter nur über die Bambu-App gesteuert. Es gibt keine Verbindung zum Drucker.
+Ein altes iPhone 7 steht vor meinem Bambu-Lab-A1-mini-Drucker und sendet sein Kamerabild live. Ich schaue es von überall auf meinem iPad oder meinem iPhone 17 an (Browser). Mehr nicht: Der Drucker selbst wird weiter nur über die Bambu-App gesteuert. Es gibt keine Verbindung zum Drucker.
 
 ## Ausgangslage
 - Sender: iPhone 7 mit iOS 15 (Safari). Es hängt dauerhaft am Strom.
-- Empfänger: iPad (aktuelles iPadOS), auch von unterwegs.
+- Empfänger: iPad (aktuelles iPadOS) und iPhone 17 (aktuelles iOS), beide auch von unterwegs.
 - Kostenlose Streaming-Apps und Alfred Camera sind keine Option (Bildqualität, Einschränkungen).
 - Ich bin kein Programmierer. Erkläre Schritte einfach, und teste selbst, bevor du etwas als fertig meldest.
 - Ich arbeite hauptsächlich mit dem iPad, bitte alles so planen, dass ich es dort bedienen kann.
 
 ## Gewünschtes Ergebnis
 1. Eine **Sender-Seite**: Auf dem iPhone im Safari öffnen, Kamera erlauben, Stream starten.
-2. Eine **Zuschauer-Seite**: Auf dem iPad öffnen, Live-Bild sehen.
+2. Eine **Zuschauer-Seite**: Auf dem iPad oder iPhone 17 öffnen, Live-Bild sehen. Sie muss im Querformat (iPad) und im Hochformat (iPhone) gut aussehen und sich auf dem iPhone 17 über "Zum Home-Bildschirm" wie eine App ablegen lassen.
 3. **Zugangsschutz**: Nur ich darf das Bild sehen (Passwort oder geheimer Link). Das Bild zeigt meine Wohnung, es darf nie öffentlich zugänglich sein.
 4. Läuft **kostenlos** (oder fast kostenlos) und ohne Rechner bei mir zu Hause.
 
@@ -34,4 +34,4 @@ Ein altes iPhone 7 steht vor meinem Bambu-Lab-A1-mini-Drucker und sendet sein Ka
 2. Kleinsten Prototyp bauen: Sender-Seite und Zuschauer-Seite im selben WLAN, ohne Passwort.
 3. Danach HTTPS, Zugangsschutz und Zugriff von außen ergänzen.
 4. Zuletzt Stabilität: Verbindungsabbrüche, automatisches Neuverbinden, Bildqualität.
-5. Nach jedem Schritt kurz erklären, was getestet wurde und wie ich es selbst mit iPhone und iPad ausprobiere.
+5. Nach jedem Schritt kurz erklären, was getestet wurde und wie ich es selbst mit iPhone 7 (Kamera), iPad und iPhone 17 ausprobiere.
