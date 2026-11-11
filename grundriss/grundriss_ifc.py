@@ -11,14 +11,16 @@ Einheit: Meter, untere linke Außenecke auf (0,0,0), Oberkante Rohfußboden = 0.
 
 Aus der Ansicht in der Skizze übernommen
 ----------------------------------------
-- Wandhöhe 3,00 m (bis Unterkante Dach beim Anbau bzw. Oberkante Decke)
+- Wandhöhe 3,00 m bis Oberkante Decke
 - Drempel (Kniestock) 0,45 m über der Decke beim Hauptkörper
 - Satteldach 40° über dem Hauptkörper, Giebel vorn (Türseite) und hinten
-- Anbau mit Flachdach auf 3,00 m
+- Im Bereich des Erkers (Anbau) ist die Ost-Dachfläche mit gleicher Neigung
+  heruntergezogen. Die Erkerwände enden schräg unter der Dachfläche,
+  die Traufe am Erker liegt dadurch tiefer als am Hauptkörper.
 
 Annahmen (in der Skizze nicht angegeben, unten änderbar)
 --------------------------------------------------------
-- Dachüberstand 0,40 m, Dachstärke 0,25 m
+- Dachstärke 0,25 m (Dachüberstand 0,30 m ist vorgegeben)
 - Deckenstärke 0,20 m, Bodenplatte 0,25 m
 - Fenster: wie im DXF-Skript (Liste FENSTER), Brüstung 0,90 m, Höhe 1,26 m
 """
@@ -43,10 +45,10 @@ from grundriss_dxf import (BREITE, FENSTER, TIEFE, TUER_BREITE,
 # --------------------------------------------------------------------------
 # Parameter für die 3. Dimension (Meter, Grad)
 # --------------------------------------------------------------------------
-WANDHOEHE = 3.00          # Oberkante Decke / Oberkante Anbauwände
+WANDHOEHE = 3.00          # Oberkante Decke
 DREMPEL = 0.45            # Kniestock über der Decke (Hauptkörper)
 DACHNEIGUNG = 40.0        # Satteldach
-DACHUEBERSTAND = 0.40     # Annahme
+DACHUEBERSTAND = 0.30     # waagerecht gemessen, an Traufe und Giebel
 DACHSTAERKE = 0.25        # Annahme
 DECKENSTAERKE = 0.20      # Annahme
 BODENPLATTE = 0.25        # Annahme
@@ -169,8 +171,20 @@ def main():
 
     wand_pset = {"Pset_WallCommon": {"IsExternal": True, "LoadBearing": True}}
 
+    tan = math.tan(math.radians(DACHNEIGUNG))
+
+    def z_dach_ost(x):
+        """Unterkante der Ost-Dachfläche an der Stelle x (x >= Firstlinie)."""
+        return TRAUFHOEHE - (x - BREITE) * tan
+
     def wand(name, x0, y0, x1, y1, z0, z1):
         return bauteil("IfcWall", name, g.form(g.quader(x0, y0, x1, y1, z0, z1)),
+                       "Mauerwerk", "SOLIDWALL", wand_pset)
+
+    def erkerwand(name, x0, x1, y0, y1):
+        """Erkerwand, deren Oberkante der heruntergezogenen Dachfläche folgt."""
+        profil = [(x0, 0), (x1, 0), (x1, z_dach_ost(x1)), (x0, z_dach_ost(x0))]
+        return bauteil("IfcWall", name, g.form(g.extrusion_xz(profil, y0, y1 - y0)),
                        "Mauerwerk", "SOLIDWALL", wand_pset)
 
     # ---------------- Außenwände (gleiche Aufteilung wie im Grundriss) -----
@@ -182,16 +196,15 @@ def main():
         "rechts_oben": wand("Außenwand Ost oben", B - t, yo - t, B, D - t, 0, H),
         "oben": wand("Außenwand Nord", 0, D - t, B, D, 0, H),
         "links": wand("Außenwand West", 0, t, t, D - t, 0, H),
-        "anbau_sued": wand("Anbau Wand Süd", B, yu, X_ANBAU, yu + t, 0, WANDHOEHE),
-        "anbau_ost": wand("Anbau Wand Ost", X_ANBAU - t, yu + t, X_ANBAU, yo - t, 0, WANDHOEHE),
-        "anbau_nord": wand("Anbau Wand Nord", B, yo - t, X_ANBAU, yo, 0, WANDHOEHE),
+        "anbau_sued": erkerwand("Anbau Wand Süd", B, X_ANBAU, yu, yu + t),
+        "anbau_ost": erkerwand("Anbau Wand Ost", X_ANBAU - t, X_ANBAU, yu + t, yo - t),
+        "anbau_nord": erkerwand("Anbau Wand Nord", B, X_ANBAU, yo - t, yo),
         # Drempel über der Öffnung zum Anbau (trägt die Traufe)
         "drempel_anbau": wand("Drempel über Anbauöffnung", B - t, yu + t, B, yo - t,
                               WANDHOEHE, H),
     }
 
     # ---------------- Giebelwände (Dreieck über der Traufe) ---------------
-    tan = math.tan(math.radians(DACHNEIGUNG))
     xf = B / 2                       # First in der Mitte
     zf = H + xf * tan                # Unterkante Dach am First
     giebel = [(0, H), (B, H), (xf, zf)]
@@ -205,9 +218,6 @@ def main():
     bauteil("IfcSlab", "Decke über EG", g.form(
         g.extrusion(innenkontur(), WANDHOEHE - DECKENSTAERKE, DECKENSTAERKE)),
         "Stahlbeton", "FLOOR")
-    bauteil("IfcSlab", "Flachdach Anbau", g.form(
-        g.quader(B, yu + t, X_ANBAU - t, yo - t, WANDHOEHE - DECKENSTAERKE, WANDHOEHE)),
-        "Stahlbeton", "ROOF")
 
     # ---------------- Satteldach -------------------------------------------
     o, dv = DACHUEBERSTAND, DACHSTAERKE / math.cos(math.radians(DACHNEIGUNG))
@@ -218,11 +228,19 @@ def main():
                                                predefined_type="GABLE_ROOF")
     dach.ObjectPlacement = g.platzierung(p_eg)
     im_geschoss.append(dach)
+    # Schleppe über dem Erker: dieselbe Ebene wie die Ost-Dachfläche,
+    # von deren Traufe bis Erker-Außenwand + Überstand heruntergezogen
+    xa, xe = B + o, X_ANBAU + o
+    schleppe = [(xa, z_dach_ost(xa)), (xe, z_dach_ost(xe)),
+                (xe, z_dach_ost(xe) + dv), (xa, z_dach_ost(xa) + dv)]
+    dach_pset = {"Pset_SlabCommon": {"IsExternal": True, "PitchAngle": DACHNEIGUNG}}
     dachflaechen = [
-        bauteil("IfcSlab", name, g.form(g.extrusion_xz(pts, -o, D + 2 * o)),
-                "Holz", "ROOF", {"Pset_SlabCommon": {"IsExternal": True, "PitchAngle": DACHNEIGUNG}},
-                im_eg=False)
-        for name, pts in [("Dachfläche West", links), ("Dachfläche Ost", rechts)]
+        bauteil("IfcSlab", "Dachfläche West", g.form(g.extrusion_xz(links, -o, D + 2 * o)),
+                "Holz", "ROOF", dach_pset, im_eg=False),
+        bauteil("IfcSlab", "Dachfläche Ost", g.form(
+            g.extrusion_xz(rechts, -o, D + 2 * o),
+            g.extrusion_xz(schleppe, yu - o, (yo - yu) + 2 * o)),
+                "Holz", "ROOF", dach_pset, im_eg=False),
     ]
     ifcopenshell.api.aggregate.assign_object(f, products=dachflaechen, relating_object=dach)
 
