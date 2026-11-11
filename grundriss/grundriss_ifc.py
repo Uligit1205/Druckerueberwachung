@@ -3,7 +3,8 @@
 Erzeugt aus der Handskizze ein BIM-Modell im IFC4-Format (Grundriss.ifc).
 
     pip install ifcopenshell ezdxf
-    python grundriss_ifc.py          ->  Grundriss.ifc
+    python grundriss_ifc.py   ->  Grundriss.ifc         (IFC4, aktueller Standard)
+                                  Grundriss_IFC2X3.ifc  (IFC2X3, für ältere Viewer/Apps)
 
 Die Grundrissmaße (Breite, Tiefe, Anbau, Wanddicke, Tür) kommen aus
 grundriss_dxf.py, damit DXF und IFC immer übereinstimmen.
@@ -32,6 +33,7 @@ import ifcopenshell.api.aggregate
 import ifcopenshell.api.context
 import ifcopenshell.api.feature
 import ifcopenshell.api.material
+import ifcopenshell.api.owner
 import ifcopenshell.api.project
 import ifcopenshell.api.pset
 import ifcopenshell.api.root
@@ -55,7 +57,9 @@ BODENPLATTE = 0.25        # Annahme
 FENSTER_BRUESTUNG = 0.90  # Annahme
 FENSTER_HOEHE = 1.26      # Annahme
 
-DATEINAME = "Grundriss.ifc"
+# Schema -> Dateiname. IFC2X3 wird zusätzlich erzeugt, weil viele Viewer
+# (besonders ältere und mobile) nur dieses Schema lesen.
+AUSGABE = {"IFC4": "Grundriss.ifc", "IFC2X3": "Grundriss_IFC2X3.ifc"}
 
 TRAUFHOEHE = WANDHOEHE + DREMPEL   # Oberkante Außenwände Hauptkörper
 
@@ -109,10 +113,52 @@ class Geo:
 # --------------------------------------------------------------------------
 # Modell
 # --------------------------------------------------------------------------
-def main():
-    f = ifcopenshell.api.project.create_file(version="IFC4")
-    projekt = ifcopenshell.api.root.create_entity(f, ifc_class="IfcProject",
-                                                  name="Grundriss")
+def setze(e, **attribute):
+    """Setzt nur Attribute, die es im Schema der Datei gibt (IFC4 vs. IFC2X3)."""
+    vorhanden = e.get_info(recursive=False)
+    for k, v in attribute.items():
+        if k in vorhanden:
+            setattr(e, k, v)
+
+
+def erzeuge(schema, dateiname):
+    f = ifcopenshell.api.project.create_file(version=schema)
+    ifc4 = schema != "IFC2X3"
+
+    # Kopfdaten und Owner History (Ersteller, Programm). In IFC2X3 Pflicht,
+    # in IFC4 optional – viele Viewer verlangen sie aber trotzdem.
+    f.header.file_name.name = dateiname
+    if not ifc4:
+        f.header.file_description.description = ("ViewDefinition [CoordinationView_V2.0]",)
+    f.header.file_name.author = ("Planer",)
+    f.header.file_name.organization = ("Grundriss-Skript",)
+    f.header.file_name.preprocessor_version = f"IfcOpenShell {ifcopenshell.version}"
+    f.header.file_name.originating_system = "grundriss_ifc.py"
+    f.header.file_name.authorization = "keine"
+    person = ifcopenshell.api.owner.add_person(
+        f, identification="Planer", family_name="Planer", given_name="")
+    org = ifcopenshell.api.owner.add_organisation(
+        f, identification="Grundriss", name="Grundriss-Skript")
+    ifcopenshell.api.owner.add_person_and_organisation(f, person=person, organisation=org)
+    ifcopenshell.api.owner.add_application(
+        f, application_developer=org, version="1.0",
+        application_full_name="grundriss_ifc.py (IfcOpenShell)",
+        application_identifier="grundriss_ifc")
+
+    def neu(cls, name=None, predefined=None):
+        """Neues IfcRoot-Objekt; Typangaben schemagerecht ablegen."""
+        e = ifcopenshell.api.root.create_entity(
+            f, ifc_class=cls, name=name, predefined_type=predefined if ifc4 else None)
+        if predefined and not ifc4:
+            if cls == "IfcRoof":
+                e.ShapeType = predefined
+            elif cls == "IfcSpace":
+                e.InteriorOrExteriorSpace = predefined
+            elif cls == "IfcSlab":
+                e.PredefinedType = predefined
+        return e
+
+    projekt = neu("IfcProject", "Grundriss")
 
     # Einheiten: Meter, m², m³, Grad
     einheiten = [
@@ -134,9 +180,8 @@ def main():
 
     # Räumliche Struktur: Grundstück > Gebäude > Erdgeschoss
     def raum_element(cls, name, eltern, **attr):
-        e = ifcopenshell.api.root.create_entity(f, ifc_class=cls, name=name)
-        for k, v in attr.items():
-            setattr(e, k, v)
+        e = neu(cls, name)
+        setze(e, CompositionType="ELEMENT", **attr)
         ifcopenshell.api.aggregate.assign_object(f, products=[e], relating_object=eltern)
         return e
 
@@ -149,15 +194,14 @@ def main():
     p_eg = eg.ObjectPlacement
 
     # Materialien
-    mat = {n: ifcopenshell.api.material.add_material(f, name=n, category=k)
+    mat = {n: ifcopenshell.api.material.add_material(f, name=n, category=k if ifc4 else None)
            for n, k in [("Mauerwerk", "masonry"), ("Stahlbeton", "concrete"),
                         ("Holz", "wood"), ("Glas", "glass")]}
 
     im_geschoss = []
 
     def bauteil(cls, name, form, material, predefined=None, psets=None, im_eg=True):
-        e = ifcopenshell.api.root.create_entity(
-            f, ifc_class=cls, name=name, predefined_type=predefined)
+        e = neu(cls, name, predefined)
         e.ObjectPlacement = g.platzierung(p_eg)
         e.Representation = form
         if material:
@@ -224,8 +268,7 @@ def main():
     z_traufe = H - o * tan
     links = [(-o, z_traufe), (xf, zf), (xf, zf + dv), (-o, z_traufe + dv)]
     rechts = [(B + o, z_traufe), (B + o, z_traufe + dv), (xf, zf + dv), (xf, zf)]
-    dach = ifcopenshell.api.root.create_entity(f, ifc_class="IfcRoof", name="Satteldach",
-                                               predefined_type="GABLE_ROOF")
+    dach = neu("IfcRoof", "Satteldach", "GABLE_ROOF")
     dach.ObjectPlacement = g.platzierung(p_eg)
     im_geschoss.append(dach)
     # Schleppe über dem Erker: dieselbe Ebene wie die Ost-Dachfläche,
@@ -246,8 +289,7 @@ def main():
 
     # ---------------- Öffnungen, Tür, Fenster ------------------------------
     def oeffnung(name, wand_el, x0, y0, x1, y1, z0, z1):
-        op = ifcopenshell.api.root.create_entity(f, ifc_class="IfcOpeningElement",
-                                                 name=name, predefined_type="OPENING")
+        op = neu("IfcOpeningElement", name, "OPENING")
         op.ObjectPlacement = g.platzierung(wand_el.ObjectPlacement)
         op.Representation = g.form(g.quader(x0, y0, x1, y1, z0, z1))
         ifcopenshell.api.feature.add_feature(f, feature=op, element=wand_el)
@@ -264,8 +306,8 @@ def main():
         g.quader(x0, 0.10, x1, t - 0.10, TUER_HOEHE - zarge, TUER_HOEHE),     # Zarge oben
         g.quader(x0 + zarge, t / 2 - 0.02, x1 - zarge, t / 2 + 0.02, 0, TUER_HOEHE - zarge),  # Blatt
     ), "Holz", "DOOR", {"Pset_DoorCommon": {"IsExternal": True}})
-    tuer.OverallWidth, tuer.OverallHeight = TUER_BREITE, TUER_HOEHE
-    tuer.OperationType = "SINGLE_SWING_LEFT"
+    setze(tuer, OverallWidth=TUER_BREITE, OverallHeight=TUER_HOEHE,
+          OperationType="SINGLE_SWING_LEFT")
     ifcopenshell.api.feature.add_filling(f, opening=op, element=tuer)
 
     for i, (seite, abstand, breite) in enumerate(FENSTER, start=1):
@@ -288,8 +330,7 @@ def main():
         ifcopenshell.api.feature.add_filling(f, opening=op, element=fe)
 
     # ---------------- Raum --------------------------------------------------
-    raum = ifcopenshell.api.root.create_entity(f, ifc_class="IfcSpace", name="EG-01",
-                                               predefined_type="INTERNAL")
+    raum = neu("IfcSpace", "EG-01", "INTERNAL")
     raum.LongName = "Wohnraum"
     raum.ObjectPlacement = g.platzierung(p_eg)
     raum.Representation = g.form(g.extrusion(innenkontur(), 0, WANDHOEHE - DECKENSTAERKE))
@@ -297,8 +338,19 @@ def main():
 
     ifcopenshell.api.spatial.assign_container(f, products=im_geschoss, relating_structure=eg)
 
-    f.write(DATEINAME)
-    print(f"{DATEINAME} geschrieben ({len(f.by_type('IfcProduct'))} Bauteile/Objekte).")
+    # Objekte ohne Owner History (z. B. manche Beziehungen) nachträglich versorgen
+    oh = next((e.OwnerHistory for e in f.by_type("IfcRoot") if e.OwnerHistory), None)
+    for e in f.by_type("IfcRoot"):
+        if e.OwnerHistory is None:
+            e.OwnerHistory = oh
+
+    f.write(dateiname)
+    print(f"{dateiname} geschrieben ({schema}, {len(f.by_type('IfcProduct'))} Objekte).")
+
+
+def main():
+    for schema, dateiname in AUSGABE.items():
+        erzeuge(schema, dateiname)
 
 
 if __name__ == "__main__":
